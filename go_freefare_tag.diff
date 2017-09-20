@@ -1,0 +1,45 @@
+diff --git a/0.3/freefare/tag.go b/0.3/freefare/tag.go
+index 4da0c80..6ab5abe 100644
+--- a/0.3/freefare/tag.go
++++ b/0.3/freefare/tag.go
+@@ -42,7 +42,7 @@ type Tag interface {
+ 
+ // Generic tag structure to hold all the underlying details
+ type tag struct {
+-	ctag C.MifareTag
++	ctag C.FreefareTag/*chris*/
+ 	dev  nfc.Device
+ 	info *C.nfc_iso14443a_info // may be nil
+ 	*finalizee
+@@ -50,7 +50,7 @@ type tag struct {
+ 
+ // Wrap a C.MifareTag and set a finalizer to automatically free the tag once it
+ // becomes unreachable.
+-func wrapTag(t C.MifareTag, d nfc.Device, i *C.nfc_iso14443a_info) Tag {
++func wrapTag(t C.FreefareTag/*chris*/, d nfc.Device, i *C.nfc_iso14443a_info) Tag {
+ 	tag := &tag{t, d, i, newFinalizee(unsafe.Pointer(t))}
+ 	var aTag Tag
+ 	switch tag.Type() {
+@@ -138,7 +138,7 @@ func GetTags(d nfc.Device) ([]Tag, error) {
+ 
+ 		iptr := uintptr(unsafe.Pointer(tagptr))
+ 		iptr += unsafe.Sizeof(*tagptr)
+-		tagptr = (*C.MifareTag)(unsafe.Pointer(iptr))
++		tagptr = (*C.FreefareTag)(unsafe.Pointer(iptr))
+ 	}
+ 
+ 	return tags, nil
+@@ -156,8 +156,11 @@ func NewTag(d nfc.Device, info *nfc.ISO14443aTarget) (Tag, error) {
+ 	// Marshall() actually returns an nfc_target, but it's first member is
+ 	// an nfc_iso14443a_info so this is safe, although we waste a couple of
+ 	// bytes.1
+-	cinfo := (*C.nfc_iso14443a_info)(unsafe.Pointer(info.Marshall()))
+-	ctag, err := C.freefare_tag_new(dd, *cinfo)
++	//cinfo := (*C.nfc_iso14443a_info)(unsafe.Pointer(info.Marshall()))
++	xptr := unsafe.Pointer(info.Marshall())
++	ctarget := (*C.nfc_target)(xptr)
++	cinfo := (*C.nfc_iso14443a_info)(xptr)
++	ctag, err := C.freefare_tag_new(dd, *ctarget)
+ 	defer C.free(unsafe.Pointer(ctag))
+ 	if ctag == nil {
+ 		if err == nil {
